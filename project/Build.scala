@@ -3,7 +3,7 @@ import Keys._
 
 object Build extends sbt.Build {
   lazy val baseSettings = seq(
-    scalaVersion := "2.10.1-RC3",
+    scalaVersion := "2.10.1",
     organization := "com.github.hexx",
     scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked")
   )
@@ -35,7 +35,8 @@ object Build extends sbt.Build {
         "Scalaz._",
         "argonaut._",
         "Argonaut._",
-        "com.github.hexx.lenser._"
+        "com.github.hexx.lenser._",
+        "com.github.hexx.argonaut._"
       ).map("import " + _ + "\n").mkString,
       initialCommands in console += "case class Address(name: String)\n",
       initialCommands in console += "case class Person(name: String, age: Int, address: Address)\n",
