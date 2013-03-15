@@ -44,3 +44,4 @@ object Build extends sbt.Build {
     ) : _*
   ).dependsOn(macro)
 }
+

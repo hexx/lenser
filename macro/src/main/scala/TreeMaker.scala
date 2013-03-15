@@ -51,6 +51,20 @@ object TreeMaker {
         Apply(Select(mkEncode(c)(memberType), newTermName("apply")), List(Select(Ident(newTermName("a$")), newTermName(memberName))))))
   }
 
+  // (a$: classType) => memberName
+  def mkName(c: Context)(memberName: String, classType: c.Type) = {
+    import c.universe._
+    Function(List(mkParam(c)("a$", classType)),
+      Literal(Constant(memberName)))
+  }
+
+  // (a$: classType) => implicitly[EncodeJson[memberType]].apply(a$.memberName)
+  def mkValue(c: Context)(memberName: String, classType: c.Type, memberType: c.Type) = {
+    import c.universe._
+    Function(List(mkParam(c)("a$", classType)),
+      Apply(Select(mkEncode(c)(memberType), newTermName("apply")), List(Select(Ident(newTermName("a$")), newTermName(memberName)))))
+  }
+
   def getFieldInfo[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String]) = {
     import c.universe._
 
