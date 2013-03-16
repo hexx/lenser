@@ -35,7 +35,8 @@ object Build extends sbt.Build {
         "Scalaz._",
         "argonaut._",
         "Argonaut._",
-        "com.github.hexx.lenser._",
+        "com.github.hexx.macros.lenser._",
+        "com.github.hexx.macros.argonaut._",
         "com.github.hexx.argonaut._"
       ).map("import " + _ + "\n").mkString,
       initialCommands in console += "case class Address(name: String)\n",
@@ -44,4 +45,3 @@ object Build extends sbt.Build {
     ) : _*
   ).dependsOn(macro)
 }
-

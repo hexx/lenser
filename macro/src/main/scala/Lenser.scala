@@ -1,9 +1,11 @@
-package com.github.hexx.lenser
+package com.github.hexx.macros.lenser
 
 import language.experimental.macros
 import language.dynamics
 
 import scala.reflect.macros.Context
+
+import com.github.hexx.macros.TreeMaker
 
 class Lenser[T] extends Dynamic {
   def selectDynamic(propName: String)  = macro Lenser.selectDynamic[T]

@@ -1,4 +1,4 @@
-package com.github.hexx.lenser
+package com.github.hexx.macros
 
 import scala.reflect.macros.Context
 
@@ -51,11 +51,10 @@ object TreeMaker {
         Apply(Select(mkEncode(c)(memberType), newTermName("apply")), List(Select(Ident(newTermName("a$")), newTermName(memberName))))))
   }
 
-  // (a$: classType) => memberName
+  // "memberName"
   def mkName(c: Context)(memberName: String, classType: c.Type) = {
     import c.universe._
-    Function(List(mkParam(c)("a$", classType)),
-      Literal(Constant(memberName)))
+    Literal(Constant(memberName))
   }
 
   // (a$: classType) => implicitly[EncodeJson[memberType]].apply(a$.memberName)
