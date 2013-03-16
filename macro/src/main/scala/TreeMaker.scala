@@ -42,13 +42,18 @@ object TreeMaker {
     TypeApply(Ident(newTermName("implicitly")), List(AppliedTypeTree(Ident(newTypeName("EncodeJson")), List(TypeTree(memberType)))))
   }
 
+  // (memberName, implicitly[EncodeJson[memberType]].apply(a$.memberName))
+  def mkAssoc0(c: Context)(memberName: String, memberType: c.Type) = {
+    import c.universe._
+    mkTuple2(c)(
+      Literal(Constant(memberName)),
+      Apply(Select(mkEncode(c)(memberType), newTermName("apply")), List(Select(Ident(newTermName("a$")), newTermName(memberName)))))
+  }
+
   // (a$: classType) => (memberName, implicitly[EncodeJson[memberType]].apply(a$.memberName))
   def mkAssoc(c: Context)(memberName: String, classType: c.Type, memberType: c.Type) = {
     import c.universe._
-    Function(List(mkParam(c)("a$", classType)),
-      mkTuple2(c)(
-        Literal(Constant(memberName)),
-        Apply(Select(mkEncode(c)(memberType), newTermName("apply")), List(Select(Ident(newTermName("a$")), newTermName(memberName))))))
+    Function(List(mkParam(c)("a$", classType)), mkAssoc0(c)(memberName, memberType))
   }
 
   // "memberName"
@@ -62,6 +67,22 @@ object TreeMaker {
     import c.universe._
     Function(List(mkParam(c)("a$", classType)),
       Apply(Select(mkEncode(c)(memberType), newTermName("apply")), List(Select(Ident(newTermName("a$")), newTermName(memberName)))))
+  }
+
+  // (a$: classType) => List((memberName, implicitly[EncodeJson[memberType]].apply(a$.memberName) ... )
+  def mkAssocAll(c: Context)(classType: c.Type) = {
+    import c.universe._
+
+    def mkList(l: List[Tree]) =
+      Apply(Select(Select(Select(Select(Ident(newTermName("scala")), newTermName("collection")), newTermName("immutable")), newTermName("List")), newTermName("apply")), l)
+
+    Function(List(mkParam(c)("a$", classType)), mkList(
+      classType.members.map(_.asTerm).filter(_.isGetter).toList.map { getter =>
+        val memberName = getter.name.encoded
+        val NullaryMethodType(memberType) = getter.typeSignatureIn(classType)
+        mkAssoc0(c)(memberName, memberType)
+      })
+    )
   }
 
   def getFieldInfo[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String]) = {

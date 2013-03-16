@@ -61,4 +61,9 @@ object Assocer {
     val (memberName, classType, memberType) = TreeMaker.getFieldInfo(c)(propName)
     c.Expr[Any](TreeMaker.mkAssoc(c)(memberName, classType, memberType))
   }
+
+  def all[T] = macro allImpl[T]
+  def allImpl[T: c.WeakTypeTag](c: Context) = {
+    c.Expr[Any](TreeMaker.mkAssocAll(c)(implicitly[c.WeakTypeTag[T]].tpe))
+  }
 }
