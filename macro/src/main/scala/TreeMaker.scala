@@ -90,11 +90,23 @@ object TreeMaker {
     TypeApply(Ident(newTermName("implicitly")), List(AppliedTypeTree(Ident(newTypeName("DecodeJson")), List(TypeTree(memberType)))))
   }
 
+  // c.downField("memberName")
+  def mkDown0(c: Context)(memberName: String) = {
+    import c.universe._
+    Apply(Select(Ident(newTermName("c$")), newTermName("downField")), List(mkName(c)(memberName)))
+  }
+
   // (c: HCursor) => c.downField("memberName")
   def mkDown(c: Context)(memberName: String) = {
     import c.universe._
+    Function(List(mkParam0(c)("c$", Ident(newTypeName("HCursor")))), mkDown0(c)(memberName))
+  }
+
+  // (c: HCursor) => c.downField("memberName").hcursor.decode[memberType]
+  def mkField(c: Context)(memberName: String, memberType: c.Type) = {
+    import c.universe._
     Function(List(mkParam0(c)("c$", Ident(newTypeName("HCursor")))),
-      Apply(Select(Ident(newTermName("c$")), newTermName("downField")), List(mkName(c)(memberName))))
+      TypeApply(Select(Select(mkDown0(c)(memberName), newTermName("hcursor")), newTermName("jdecode")), List(TypeTree(memberType))))
   }
 
   def getFieldInfo[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String]) = {

@@ -31,4 +31,6 @@ trait Decoder[A] extends (HCursor => DecodeResult[A]) {
   }
 
   def down(f: Downer[A] => HCursor => ACursor) = f(new Downer[A])
+
+  def field[B](f: Fielder[A] => HCursor => DecodeResult[B]) = f(new Fielder[A])
 }
