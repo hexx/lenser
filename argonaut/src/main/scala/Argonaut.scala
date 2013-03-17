@@ -15,6 +15,8 @@ trait Encoder[A] extends (A => Json) {
 
   def name(f: Namer[A] => String) = f(new Namer[A])
 
+  def value(f: Valuer[A] => String) = f(new Valuer[A])
+
   def assoc(f: Assocer[A] => A => (JsonField, Json)) = f(new Assocer[A])
 
   def encoder: List[A => (JsonField, Json)]
