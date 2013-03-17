@@ -30,8 +30,8 @@ object Namer {
   def selectDynamic[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String]) = applyDynamic[T](c)(propName)()
   def applyDynamic[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String])() = {
     import c.universe._
-    val (memberName, classType, _) = TreeMaker.getFieldInfo(c)(propName)
-    c.Expr[Any](TreeMaker.mkName(c)(memberName, classType))
+    val (memberName, _, _) = TreeMaker.getFieldInfo(c)(propName)
+    c.Expr[Any](TreeMaker.mkName(c)(memberName))
   }
 }
 
@@ -65,5 +65,33 @@ object Assocer {
   def all[T] = macro allImpl[T]
   def allImpl[T: c.WeakTypeTag](c: Context) = {
     c.Expr[Any](TreeMaker.mkAssocAll(c)(implicitly[c.WeakTypeTag[T]].tpe))
+  }
+}
+
+class Decoder[T] extends Dynamic {
+  def selectDynamic(propName: String)  = macro Decoder.selectDynamic[T]
+  def applyDynamic(propName: String)() = macro Decoder.applyDynamic[T]
+}
+
+object Decoder {
+  def selectDynamic[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String]) = applyDynamic[T](c)(propName)()
+  def applyDynamic[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String])() = {
+    import c.universe._
+    val (_, _, memberType) = TreeMaker.getFieldInfo(c)(propName)
+    c.Expr[Any](TreeMaker.mkDecode(c)(memberType))
+  }
+}
+
+class Downer[T] extends Dynamic {
+  def selectDynamic(propName: String)  = macro Downer.selectDynamic[T]
+  def applyDynamic(propName: String)() = macro Downer.applyDynamic[T]
+}
+
+object Downer {
+  def selectDynamic[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String]) = applyDynamic[T](c)(propName)()
+  def applyDynamic[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String])() = {
+    import c.universe._
+    val (memberName, _, _) = TreeMaker.getFieldInfo(c)(propName)
+    c.Expr[Any](TreeMaker.mkDown(c)(memberName))
   }
 }

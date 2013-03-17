@@ -10,9 +10,11 @@ object TreeMaker {
   }
 
   // (name: tpe) => ...
-  def mkParam(c: Context)(name: String, tpe: c.Type) = {
+  def mkParam(c: Context)(name: String, tpe: c.Type) = mkParam0(c)(name, c.universe.TypeTree(tpe))
+
+  def mkParam0(c: Context)(name: String, tpe: c.Tree) = {
     import c.universe._
-    ValDef(Modifiers(Flag.PARAM), newTermName(name), TypeTree(tpe), EmptyTree)
+    ValDef(Modifiers(Flag.PARAM), newTermName(name), tpe, EmptyTree)
   }
 
   // (setter, getter)
@@ -57,10 +59,7 @@ object TreeMaker {
   }
 
   // "memberName"
-  def mkName(c: Context)(memberName: String, classType: c.Type) = {
-    import c.universe._
-    Literal(Constant(memberName))
-  }
+  def mkName(c: Context)(memberName: String) = c.universe.Literal(c.universe.Constant(memberName))
 
   // (a$: classType) => implicitly[EncodeJson[memberType]].apply(a$.memberName)
   def mkValue(c: Context)(memberName: String, classType: c.Type, memberType: c.Type) = {
@@ -83,6 +82,19 @@ object TreeMaker {
         mkAssoc0(c)(memberName, memberType)
       })
     )
+  }
+
+  // implicitly[DecodeJson[memberType]]
+  def mkDecode(c: Context)(memberType: c.Type) = {
+    import c.universe._
+    TypeApply(Ident(newTermName("implicitly")), List(AppliedTypeTree(Ident(newTypeName("DecodeJson")), List(TypeTree(memberType)))))
+  }
+
+  // (c: HCursor) => c.downField("memberName")
+  def mkDown(c: Context)(memberName: String) = {
+    import c.universe._
+    Function(List(mkParam0(c)("c$", Ident(newTypeName("HCursor")))),
+      Apply(Select(Ident(newTermName("c$")), newTermName("downField")), List(mkName(c)(memberName))))
   }
 
   def getFieldInfo[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String]) = {
