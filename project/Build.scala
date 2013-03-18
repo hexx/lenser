@@ -28,7 +28,7 @@ object Build extends sbt.Build {
       version := "0.0.1",
       libraryDependencies ++= Seq(
         "com.github.hexx" %% "lenser-macro" % "0.0.1",
-        "io.argonaut" %% "argonaut" % "6.0-M2"
+        "io.argonaut" %% "argonaut" % "6.0-M3"
       ),
       initialCommands in console += Seq(
         "scalaz._",
