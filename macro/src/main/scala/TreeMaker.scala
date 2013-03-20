@@ -3,110 +3,63 @@ package com.github.hexx.macros
 import scala.reflect.macros.Context
 
 object TreeMaker {
-  // (_1, _2)
-  def mkTuple2(c: Context)(_1: c.Tree, _2: c.Tree) = {
-    import c.universe._
-    Apply(Select(Select(Ident(newTermName("scala")), newTermName("Tuple2")), newTermName("apply")), List(_1, _2))
-  }
-
-  // (name: tpe) => ...
-  def mkParam(c: Context)(name: String, tpe: c.Type) = mkParam0(c)(name, c.universe.TypeTree(tpe))
-
-  def mkParam0(c: Context)(name: String, tpe: c.Tree) = {
-    import c.universe._
-    ValDef(Modifiers(Flag.PARAM), newTermName(name), tpe, EmptyTree)
-  }
-
   // (setter, getter)
   def mkLens(c: Context)(memberName: String, classType: c.Type, memberType: c.Type) = {
     import c.universe._
 
-    // (a$: classType) => a$.memberName
-    def mkGetter(memberName: String, classType: Type) =
-      Function(List(mkParam(c)("a$", classType)), Select(Ident(newTermName("a$")), newTermName(memberName)))
+    // (_1, _2)
+    def mkTuple2(_1: Tree, _2: Tree) =
+      Apply(Select(Select(Ident(newTermName("scala")), newTermName("Tuple2")), newTermName("apply")), List(_1, _2))
+
+    // (name: tpe) => ...
+    def mkParam(name: String, tpe: c.Type) =
+      ValDef(Modifiers(Flag.PARAM), newTermName(name), TypeTree(tpe), EmptyTree)
 
     // (a$: classType, x$: memberType) => a$.copy(memberName = x$)
     def mkSetter(memberName: String, classType: Type, memberType: Type) =
-      Function(List(mkParam(c)("a$", classType), mkParam(c)("x$", memberType)),
+      Function(List(mkParam("a$", classType), mkParam("x$", memberType)),
         Apply(Select(Ident(newTermName("a$")), newTermName("copy")),
           List(AssignOrNamedArg(Ident(newTermName(memberName)), Ident(newTermName("x$"))))))
 
-    // scalaz.Lens.lensu(_1, _2)
-    def mkLensu(_1: Tree, _2: Tree) =
-      Apply(Select(Select(Ident(newTermName("scalaz")), newTermName("Lens")), newTermName("lensu")), List(_1, _2))
+    // (a$: classType) => a$.memberName
+    def mkGetter(memberName: String, classType: Type) =
+      Function(List(mkParam("a$", classType)), Select(Ident(newTermName("a$")), newTermName(memberName)))
 
-    mkLensu(mkSetter(memberName, classType, memberType), mkGetter(memberName, classType))
+    mkTuple2(mkSetter(memberName, classType, memberType), mkGetter(memberName, classType))
   }
 
-  // implicitly[EncodeJson[memberType]]
-  def mkEncode(c: Context)(memberType: c.Type) = {
+  // Name[memberName].apply("memberName")
+  def mkName(c: Context)(memberName: String, memberType: c.Type) = {
     import c.universe._
-    TypeApply(Ident(newTermName("implicitly")), List(AppliedTypeTree(Ident(newTypeName("EncodeJson")), List(TypeTree(memberType)))))
+
+    Apply(
+      TypeApply(
+        Select(Select(Select(Select(Select(Ident(newTermName("com")), newTermName("github")), newTermName("hexx")), newTermName("macros")), newTermName("Name")), newTermName("apply")),
+        List(TypeTree(memberType))),
+      List(Literal(Constant(memberName))))
   }
 
-  // (memberName, implicitly[EncodeJson[memberType]].apply(a$.memberName))
-  def mkAssoc0(c: Context)(memberName: String, memberType: c.Type) = {
-    import c.universe._
-    mkTuple2(c)(
-      Literal(Constant(memberName)),
-      Apply(Select(mkEncode(c)(memberType), newTermName("apply")), List(Select(Ident(newTermName("a$")), newTermName(memberName)))))
-  }
-
-  // (a$: classType) => (memberName, implicitly[EncodeJson[memberType]].apply(a$.memberName))
-  def mkAssoc(c: Context)(memberName: String, classType: c.Type, memberType: c.Type) = {
-    import c.universe._
-    Function(List(mkParam(c)("a$", classType)), mkAssoc0(c)(memberName, memberType))
-  }
-
-  // "memberName"
-  def mkName(c: Context)(memberName: String) = c.universe.Literal(c.universe.Constant(memberName))
-
-  // (a$: classType) => implicitly[EncodeJson[memberType]].apply(a$.memberName)
-  def mkValue(c: Context)(memberName: String, classType: c.Type, memberType: c.Type) = {
-    import c.universe._
-    Function(List(mkParam(c)("a$", classType)),
-      Apply(Select(mkEncode(c)(memberType), newTermName("apply")), List(Select(Ident(newTermName("a$")), newTermName(memberName)))))
-  }
-
-  // (a$: classType) => List((memberName, implicitly[EncodeJson[memberType]].apply(a$.memberName) ... )
-  def mkAssocAll(c: Context)(classType: c.Type) = {
+  // Name[memberType].apply(memberName) :: ... :: HNil
+  def mkNameAll(c: Context)(classType: c.Type) = {
     import c.universe._
 
-    def mkList(l: List[Tree]) =
-      Apply(Select(Select(Select(Select(Ident(newTermName("scala")), newTermName("collection")), newTermName("immutable")), newTermName("List")), newTermName("apply")), l)
+    def mkHNil = Select(Ident(newTermName("shapeless")), newTermName("HNil"))
 
-    Function(List(mkParam(c)("a$", classType)), mkList(
+    def mkHlistOps = Select(Select(Ident(newTermName("shapeless")), newTermName("HList")), newTermName("hlistOps"))
+
+    def mkHList(l: List[Tree]): Tree = l match {
+      case Nil      => mkHNil
+      case x :: Nil => Apply(Select(mkHNil, newTermName("$colon$colon")), List(x))
+      case x :: xs  => Apply(Select(Apply(mkHlistOps, List(mkHList(xs))), newTermName("$colon$colon")), List(x))
+    }
+
+    mkHList(
       classType.members.map(_.asTerm).filter(_.isGetter).toList.map { getter =>
         val memberName = getter.name.encoded
         val NullaryMethodType(memberType) = getter.typeSignatureIn(classType)
-        mkAssoc0(c)(memberName, memberType)
-      })
+        mkName(c)(memberName, memberType)
+      }
     )
-  }
-
-  // implicitly[DecodeJson[memberType]]
-  def mkDecode(c: Context)(memberType: c.Type) = {
-    import c.universe._
-    TypeApply(Ident(newTermName("implicitly")), List(AppliedTypeTree(Ident(newTypeName("DecodeJson")), List(TypeTree(memberType)))))
-  }
-
-  // c.downField("memberName")
-  def mkDown0(c: Context)(memberName: String) = {
-    import c.universe._
-    Apply(Select(Ident(newTermName("c$")), newTermName("downField")), List(mkName(c)(memberName)))
-  }
-
-  // (c: HCursor) => c.downField("memberName")
-  def mkDown(c: Context)(memberName: String) = {
-    import c.universe._
-    Function(List(mkParam0(c)("c$", Ident(newTypeName("HCursor")))), mkDown0(c)(memberName))
-  }
-
-  // (c: HCursor) => c.downField("memberName").hcursor.decode[memberType]
-  def mkField(c: Context)(memberName: String, memberType: c.Type) = {
-    import c.universe._
-    Function(List(mkParam0(c)("c$", Ident(newTypeName("HCursor")))),
-      TypeApply(Select(Select(mkDown0(c)(memberName), newTermName("hcursor")), newTermName("jdecode")), List(TypeTree(memberType))))
   }
 
   def getFieldInfo[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String]) = {
@@ -121,6 +74,7 @@ object TreeMaker {
       case NullaryMethodType(memberType) => memberType
       case _                             => c.abort(c.enclosingPosition, "member %s is not a field".format(memberName))
     }
+
     (memberName, classType, memberType)
   }
 }
