@@ -8,6 +8,13 @@ object Build extends sbt.Build {
     scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked")
   )
 
+  lazy val exampleSettings = seq(
+    initialCommands in console += "case class Address(name: String)\n",
+    initialCommands in console += "case class Person(name: String, age: Int, address: Address)\n",
+    initialCommands in console += """val a = Address("Akihabara")""" + "\n",
+    initialCommands in console += """val p = Person("HogeIka", 13, Address("Funabashi"))""" + "\n"
+  )
+
   lazy val macro = Project(
     id = "macro",
     base = file("macro")
@@ -23,11 +30,17 @@ object Build extends sbt.Build {
     id = "lenser",
     base = file("lenser")
   ).settings(
-    baseSettings ++ seq(
+    baseSettings ++ exampleSettings ++ seq(
       libraryDependencies ++= Seq(
         "com.github.hexx" %% "lenser-macro" % "0.0.1",
         "org.scalaz" %% "scalaz-core" % "7.0.0-M9"
-      )
+      ),
+      initialCommands in console += Seq(
+        "scalaz._",
+        "Scalaz._",
+        "com.github.hexx.macros._",
+        "com.github.hexx.scalaz._"
+      ).map("import " + _ + "\n").mkString
     ) : _*
   ).dependsOn(macro)
 
@@ -35,25 +48,21 @@ object Build extends sbt.Build {
     id = "argonaut",
     base = file("argonaut")
   ).settings(
-    baseSettings ++ seq(
+    baseSettings ++ exampleSettings ++ seq(
       name := "argonaut",
       version := "0.0.1",
       libraryDependencies ++= Seq(
         "com.github.hexx" %% "lenser-macro" % "0.0.1",
-        "io.argonaut" %% "argonaut" % "6.0-M3",
-        "com.chuusai" %% "shapeless" % "1.2.4"
+        "io.argonaut" %% "argonaut" % "6.0-M3"
       ),
       initialCommands in console += Seq(
         "scalaz._",
         "Scalaz._",
         "argonaut._",
         "Argonaut._",
-        "shapeless._",
+        "com.github.hexx.macros._",
         "com.github.hexx.argonaut._"
       ).map("import " + _ + "\n").mkString,
-      initialCommands in console += "case class Address(name: String)\n",
-      initialCommands in console += "case class Person(name: String, age: Int, address: Address)\n",
-      initialCommands in console += """val p = Person("HogeIka", 13, Address("Funabashi"))""" + "\n",
       initialCommands in console += """val pj = "{\"address\":{\"name\":\"Shibuya\"},\"age\":\"29\",\"name\":\"kmizu\"}""""
     ) : _*
   ).dependsOn(macro)

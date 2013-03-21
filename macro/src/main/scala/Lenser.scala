@@ -5,17 +5,23 @@ import language.dynamics
 
 import scala.reflect.macros.Context
 
-class Lenser[T] extends Dynamic {
-  def selectDynamic(propName: String)  = macro Lenser.selectDynamic[T]
-  def applyDynamic(propName: String)() = macro Lenser.applyDynamic[T]
+case class Lens[A, B](setter: (A, B) => A, getter: A => B, name: String)
+
+class Lenser[A] extends Dynamic {
+  def selectDynamic(propName: String)  = macro Lenser.selectDynamic[A]
+  def applyDynamic(propName: String)() = macro Lenser.applyDynamic[A]
 }
 
 object Lenser {
-  def lens[T] = new Lenser[T]
+  type ToLenser[A, B] = Lenser[A] => Lens[A, B]
 
-  def selectDynamic[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String]) = applyDynamic[T](c)(propName)()
+  def lenser[A] = new Lenser[A]
 
-  def applyDynamic[T: c.WeakTypeTag](c: Context)(propName: c.Expr[String])() = {
+  def lens[A, B](f: ToLenser[A, B]) = f(new Lenser[A])
+
+  def selectDynamic[A: c.WeakTypeTag](c: Context)(propName: c.Expr[String]) = applyDynamic[A](c)(propName)()
+
+  def applyDynamic[A: c.WeakTypeTag](c: Context)(propName: c.Expr[String])() = {
     import c.universe._
 
     val (memberName, classType, memberType) = TreeMaker.getFieldInfo(c)(propName)
