@@ -30,8 +30,8 @@ object TreeMaker {
     mkApplyLens(mkSetter(memberName, classType, memberType), mkGetter(memberName, classType), Literal(Constant(memberName)))
   }
 
-  // (a$: classType) => List((memberName, implicitly[EncodeJson[memberType]].apply(a$.memberName)), ...)
-  def mkAssocAll(c: Context)(classType: c.Type) = {
+  // EncodeJson((a$: classType) => jObjectAssocList(List((memberName, implicitly[EncodeJson[memberType]].apply(a$.memberName)), ...)))
+  def mkEncodeAll(c: Context)(classType: c.Type) = {
     import c.universe._
 
     // (_1, _2)
@@ -53,12 +53,18 @@ object TreeMaker {
     def mkList(l: List[Tree]) =
       Apply(Select(Select(Select(Select(Ident(newTermName("scala")), newTermName("collection")), newTermName("immutable")), newTermName("List")), newTermName("apply")), l)
 
-    Function(List(mkParam(c)("a$", classType)), mkList(
-      classType.members.map(_.asTerm).filter(_.isGetter).toList.map { getter =>
-        val memberName = getter.name.encoded
-        val NullaryMethodType(memberType) = getter.typeSignatureIn(classType)
-        mkAssoc(memberName, memberType)
-      })
+    Apply(Select(Ident(newTermName("argonaut")), newTermName("EncodeJson")),
+      List(Function(List(mkParam(c)("a$", classType)),
+        Apply(Select(Select(Ident(newTermName("argonaut")), newTermName("Argonaut")), newTermName("jObjectAssocList")),
+          List(mkList(
+            classType.members.map(_.asTerm).filter(_.isGetter).toList.map { getter =>
+              val memberName = getter.name.encoded
+              val NullaryMethodType(memberType) = getter.typeSignatureIn(classType)
+              mkAssoc(memberName, memberType)
+            }
+          ))
+        )
+      ))
     )
   }
 
