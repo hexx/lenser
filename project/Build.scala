@@ -33,7 +33,7 @@ object Build extends sbt.Build {
     baseSettings ++ exampleSettings ++ seq(
       libraryDependencies ++= Seq(
         "com.github.hexx" %% "lenser-macro" % "0.0.1",
-        "org.scalaz" %% "scalaz-core" % "7.0.0-M9"
+        "org.scalaz" %% "scalaz-core" % "7.0.0-RC1"
       ),
       initialCommands in console += Seq(
         "scalaz._",
@@ -53,7 +53,7 @@ object Build extends sbt.Build {
       version := "0.0.1",
       libraryDependencies ++= Seq(
         "com.github.hexx" %% "lenser-macro" % "0.0.1",
-        "io.argonaut" %% "argonaut" % "6.0-M3"
+        "io.argonaut" %% "argonaut" % "6.0-M4"
       ),
       initialCommands in console += Seq(
         "scalaz._",
